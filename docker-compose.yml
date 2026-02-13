@@ -1,0 +1,59 @@
+version: '3.3'
+
+services:
+  backend:
+    build: ./backend
+    container_name: mfr_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CLICKHOUSE_URL=clickhouse://clickhouse:8123/default
+    depends_on:
+      - redis
+      - clickhouse
+    networks:
+      - mfr_network
+
+  frontend:
+    build: ./frontend
+    container_name: mfr_frontend
+    ports:
+      - "3000:3000"
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
+    depends_on:
+      - backend
+    networks:
+      - mfr_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mfr_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mfr_network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: mfr_clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - mfr_network
+
+networks:
+  mfr_network:
+    driver: bridge
